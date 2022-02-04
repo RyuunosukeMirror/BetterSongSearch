@@ -53,7 +53,7 @@
 				<text text='BetterSongSearch - Settings' align='Center'/>
 			</horizontal>
 			<macro.as-host host='cfgInstance'>
-				<toggle-setting text='Return to BSS from Solo' value="returnToBssFromSolo" bind-value="true" apply-on-change="true" hover-hint="When Playing a song from Better Song Search, return once leaving the Solo menu"/>
+				<toggle-setting text='Return to BSS from Solo' value="returnToBssFromSolo" bind-value="true" apply-on-change="true" hover-hint="When Playing a song from BSS, return once leaving the Solo menu"/>
 				<toggle-setting text='Smaller Font size' value="smallerFontSize" bind-value="true" apply-on-change="true" hover-hint="Makes the Font size of the Song List smaller"/>
 			</macro.as-host>
 			<horizontal pad-top="5">
@@ -67,7 +67,7 @@
 			<horizontal bg='panel-top-gradient' ignore-layout='true' anchor-max-x='.97' anchor-min-x='.03' anchor-min-y='1' anchor-pos-y='-5'>
 				<text text='BetterSongSearch - Pending Downloads' align='Center'/>
 			</horizontal>
-			<text text='You still have pending downloads which would be stopped by closing Better Song Search. Continue?' word-wrapping='true' align='Capline'/>
+			<text text='You still have pending downloads which would be stopped by closing BSS. Continue?' word-wrapping='true' align='Capline'/>
 			<horizontal pad-top='4'>
 				<primary-button text='Yes' on-click='ForcedUIClose' click-event='CloseDownloadCancelConfirm'/>
 				<button text='Cancel' on-click='ForcedUICloseCancel' click-event='CloseDownloadCancelConfirm'/>

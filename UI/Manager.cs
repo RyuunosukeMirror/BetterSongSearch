@@ -4,28 +4,38 @@ using HMUI;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace BetterSongSearch.UI {
-	static class Manager {
-		public static void Init() {
-			MenuButtons.instance.RegisterButton(new MenuButton("Better Song Search", "Search songs, but better", ShowFlow, true));
-		}
+namespace BetterSongSearch.UI
+{
+    internal static class Manager
+    {
+        public static void Init()
+        {
+            MenuButtons.instance.RegisterButton(new MenuButton("ryuunosuke.moe | BSS", "Search songs, but better", ShowFlow, true));
+        }
 
-		internal static FlowCoordinator _parentFlow { get; private set; }
-		internal static BSSFlowCoordinator _flow { get; private set; }
-		internal static Button.ButtonClickedEvent goToSongSelect { get; private set; } = null;
+        internal static FlowCoordinator _parentFlow { get; private set; }
+        internal static BSSFlowCoordinator _flow { get; private set; }
+        internal static Button.ButtonClickedEvent goToSongSelect { get; private set; } = null;
 
-		public static void ShowFlow() => ShowFlow(false);
-		public static void ShowFlow(bool immediately) {
-			goToSongSelect =
-				(GameObject.Find("SoloButton") ?? GameObject.Find("Wrapper/BeatmapWithModifiers/BeatmapSelection/EditButton"))
-				?.GetComponent<NoTransitionsButton>()?.onClick;
+        public static void ShowFlow()
+        {
+            ShowFlow(false);
+        }
 
-			if(_flow == null)
-				_flow = BeatSaberUI.CreateFlowCoordinator<BSSFlowCoordinator>();
+        public static void ShowFlow(bool immediately)
+        {
+            goToSongSelect =
+                (GameObject.Find("SoloButton") ?? GameObject.Find("Wrapper/BeatmapWithModifiers/BeatmapSelection/EditButton"))
+                ?.GetComponent<NoTransitionsButton>()?.onClick;
 
-			_parentFlow = BeatSaberUI.MainFlowCoordinator.YoungestChildFlowCoordinatorOrSelf();
+            if (_flow == null)
+            {
+                _flow = BeatSaberUI.CreateFlowCoordinator<BSSFlowCoordinator>();
+            }
 
-			BeatSaberUI.PresentFlowCoordinator(_parentFlow, _flow, immediately: immediately);
-		}
-	}
+            _parentFlow = BeatSaberUI.MainFlowCoordinator.YoungestChildFlowCoordinatorOrSelf();
+
+            BeatSaberUI.PresentFlowCoordinator(_parentFlow, _flow, immediately: immediately);
+        }
+    }
 }

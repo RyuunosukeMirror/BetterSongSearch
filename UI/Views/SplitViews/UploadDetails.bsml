@@ -8,7 +8,7 @@
 				<text text="Song Key" align="Center" color='#7CF'/>
 				<vertical>
 					<text id="selectedSongKey" align="Center" all-uppercase='true'/>
-					<text text="BeatSaver Rating" align="Center" color='#7CF'/>
+					<text text="Beatsaver Rating" align="Center" color='#7CF'/>
 					<text id="selectedRating" align="Center"/>
 					<!--<text text="Downloads" align="Center" color='#7CF'/>
 					<text id="selectedDownloadCount" align="Center"/>-->

@@ -1,25 +1,34 @@
 ﻿using BeatSaberMarkupLanguage.Attributes;
 using BeatSaberMarkupLanguage.Components.Settings;
 
-namespace BetterSongSearch.UI.SplitViews {
-	class MultiDl {
-		public static readonly MultiDl instance = new MultiDl();
-		MultiDl() { }
+namespace BetterSongSearch.UI.SplitViews
+{
+    internal class MultiDl
+    {
+        public static readonly MultiDl instance = new MultiDl();
 
-		[UIComponent("multiDlCountSlider")] SliderSetting multiDlCountSlider = null;
-		[UIAction("StartMultiDownload")]
-		void StartMultiDownload() {
-			for(int i = BSSFlowCoordinator.songListView.songList.GetVisibleCellsIdRange().Item1, downloaded = 0; i < SongListController.searchedSongsList.Count; i++) {
-				if(SongListController.searchedSongsList[i].CheckIsDownloaded() || !SongListController.searchedSongsList[i].CheckIsDownloadable())
-					continue;
+        private MultiDl() { }
 
-				BSSFlowCoordinator.downloadHistoryView.TryAddDownload(SongListController.searchedSongsList[i], true);
+        [UIComponent("multiDlCountSlider")] private readonly SliderSetting multiDlCountSlider = null;
+        [UIAction("StartMultiDownload")]
+        private void StartMultiDownload()
+        {
+            for (int i = BSSFlowCoordinator.songListView.songList.GetVisibleCellsIdRange().Item1, downloaded = 0; i < SongListController.searchedSongsList.Count; i++)
+            {
+                if (SongListController.searchedSongsList[i].CheckIsDownloaded() || !SongListController.searchedSongsList[i].CheckIsDownloadable())
+                {
+                    continue;
+                }
 
-				if(++downloaded >= multiDlCountSlider.Value)
-					break;
-			}
+                BSSFlowCoordinator.downloadHistoryView.TryAddDownload(SongListController.searchedSongsList[i], true);
 
-			BSSFlowCoordinator.downloadHistoryView.RefreshTable(true);
-		}
-	}
+                if (++downloaded >= multiDlCountSlider.Value)
+                {
+                    break;
+                }
+            }
+
+            BSSFlowCoordinator.downloadHistoryView.RefreshTable(true);
+        }
+    }
 }

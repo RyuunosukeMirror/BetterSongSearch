@@ -9,75 +9,91 @@ using System.Linq;
 using TMPro;
 using UnityEngine.UI;
 
-namespace BetterSongSearch.UI.SplitViews {
-	class Presets {
-		public static readonly Presets instance = new Presets();
-		Presets() { }
+namespace BetterSongSearch.UI.SplitViews
+{
+    internal class Presets
+    {
+        public static readonly Presets instance = new Presets();
 
-		class FilterPresetRow {
-			public readonly string name;
-			[UIComponent("label")] TextMeshProUGUI label = null;
+        private Presets() { }
 
-			public FilterPresetRow(string name) => this.name = name;
+        private class FilterPresetRow
+        {
+            public readonly string name;
+            [UIComponent("label")] private readonly TextMeshProUGUI label = null;
 
-			[UIAction("refresh-visuals")]
-			public void Refresh(bool selected, bool highlighted) {
-				label.color = new UnityEngine.Color(
-					selected ? 0 : 255,
-					selected ? 128 : 255,
-					selected ? 128 : 255,
-					highlighted ? 0.9f : 0.6f
-				);
-			}
-		}
+            public FilterPresetRow(string name)
+            {
+                this.name = name;
+            }
 
-		[UIAction("#post-parse")]
-		void Parsed() {
-			FilterPresets.Init();
+            [UIAction("refresh-visuals")]
+            public void Refresh(bool selected, bool highlighted)
+            {
+                label.color = new UnityEngine.Color(
+                    selected ? 0 : 255,
+                    selected ? 128 : 255,
+                    selected ? 128 : 255,
+                    highlighted ? 0.9f : 0.6f
+                );
+            }
+        }
 
-			BSMLStuff.GetScrollbarForTable(presetList.tableView.gameObject, _presetScrollbarContainer.transform);
+        [UIAction("#post-parse")]
+        private void Parsed()
+        {
+            FilterPresets.Init();
 
-			// BSML / HMUI my beloved
-			ReflectionUtil.SetField(newPresetName.modalKeyboard.modalView, "_animateParentCanvas", false);
-		}
+            BSMLStuff.GetScrollbarForTable(presetList.tableView.gameObject, _presetScrollbarContainer.transform);
+
+            // BSML / HMUI my beloved
+            ReflectionUtil.SetField(newPresetName.modalKeyboard.modalView, "_animateParentCanvas", false);
+        }
 
 
-		[UIComponent("loadButton")] private NoTransitionsButton loadButton = null;
-		[UIComponent("deleteButton")] private NoTransitionsButton deleteButton = null;
-		[UIComponent("presetList")] private CustomCellListTableData presetList = null;
-		[UIComponent("newPresetName")] private StringSetting newPresetName = null;
-		[UIComponent("presetScrollbarContainer")] private VerticalLayoutGroup _presetScrollbarContainer = null;
-		internal void ReloadPresets() {
-			presetList.data = FilterPresets.presets.Select(x => new FilterPresetRow(x.Key)).ToList<object>();
-			presetList.tableView.ReloadData();
-			presetList.tableView.ClearSelection();
+        [UIComponent("loadButton")] private readonly NoTransitionsButton loadButton = null;
+        [UIComponent("deleteButton")] private readonly NoTransitionsButton deleteButton = null;
+        [UIComponent("presetList")] private readonly CustomCellListTableData presetList = null;
+        [UIComponent("newPresetName")] private readonly StringSetting newPresetName = null;
+        [UIComponent("presetScrollbarContainer")] private readonly VerticalLayoutGroup _presetScrollbarContainer = null;
+        internal void ReloadPresets()
+        {
+            presetList.data = FilterPresets.presets.Select(x => new FilterPresetRow(x.Key)).ToList<object>();
+            presetList.tableView.ReloadData();
+            presetList.tableView.ClearSelection();
 
-			loadButton.interactable = false;
-			deleteButton.interactable = false;
+            loadButton.interactable = false;
+            deleteButton.interactable = false;
 
-			newPresetName.Text = "";
-		}
+            newPresetName.Text = "";
+        }
 
-		string curSelected;
-		void PresetSelected(object _, FilterPresetRow row) {
-			loadButton.interactable = true;
-			deleteButton.interactable = true;
-			newPresetName.Text = curSelected = row.name;
-		}
+        private string curSelected;
 
-		void AddPreset() {
-			FilterPresets.Save(newPresetName.Text);
-			ReloadPresets();
-		}
+        private void PresetSelected(object _, FilterPresetRow row)
+        {
+            loadButton.interactable = true;
+            deleteButton.interactable = true;
+            newPresetName.Text = curSelected = row.name;
+        }
 
-		void LoadPreset() {
-			PlaylistCreation.nameToUseOnNextOpen = curSelected;
+        private void AddPreset()
+        {
+            FilterPresets.Save(newPresetName.Text);
+            ReloadPresets();
+        }
 
-			BSSFlowCoordinator.filterView.SetFilter(FilterPresets.presets[curSelected]);
-		}
-		void DeletePreset() {
-			FilterPresets.Delete(curSelected);
-			ReloadPresets();
-		}
-	}
+        private void LoadPreset()
+        {
+            PlaylistCreation.nameToUseOnNextOpen = curSelected;
+
+            BSSFlowCoordinator.filterView.SetFilter(FilterPresets.presets[curSelected]);
+        }
+
+        private void DeletePreset()
+        {
+            FilterPresets.Delete(curSelected);
+            ReloadPresets();
+        }
+    }
 }

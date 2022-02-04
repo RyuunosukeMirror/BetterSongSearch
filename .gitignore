@@ -6,3 +6,6 @@ obj/*
 HarmonyPatches/RemoveSplashscreen.cs
 HarmonyPatchHelper.cs
 Screenshots/SocialPreview.jpg
+BetterSongSearch.sln
+.vs/BetterSongSearch/v16/.suo
+.vs/BetterSongSearch/DesignTimeBuild/.dtbcache.v2

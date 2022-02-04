@@ -2,29 +2,39 @@
 using HarmonyLib;
 using HMUI;
 
-namespace BetterSongSearch.HarmonyPatches {
-	[HarmonyPatch(typeof(FlowCoordinator), "DismissFlowCoordinator")]
-	static class ReturnToBSS {
-		public static bool returnTobss = false;
-		static void Prefix(FlowCoordinator flowCoordinator, ref bool immediately) {
-			if(!returnTobss)
-				return;
+namespace BetterSongSearch.HarmonyPatches
+{
+    [HarmonyPatch(typeof(FlowCoordinator), "DismissFlowCoordinator")]
+    internal static class ReturnToBSS
+    {
+        public static bool returnTobss = false;
 
-			if(!(flowCoordinator is SoloFreePlayFlowCoordinator)) {
-				returnTobss = false;
-				return;
-			}
+        private static void Prefix(FlowCoordinator flowCoordinator, ref bool immediately)
+        {
+            if (!returnTobss)
+            {
+                return;
+            }
 
-			immediately = true;
-		}
+            if (!(flowCoordinator is SoloFreePlayFlowCoordinator))
+            {
+                returnTobss = false;
+                return;
+            }
 
-		static void Postfix() {
-			if(!returnTobss)
-				return;
+            immediately = true;
+        }
 
-			returnTobss = false;
+        private static void Postfix()
+        {
+            if (!returnTobss)
+            {
+                return;
+            }
 
-			Manager.ShowFlow(true);
-		}
-	}
+            returnTobss = false;
+
+            Manager.ShowFlow(true);
+        }
+    }
 }

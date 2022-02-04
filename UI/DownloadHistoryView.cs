@@ -12,194 +12,246 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine.UI;
 
-namespace BetterSongSearch.UI {
-	[HotReload(RelativePathToLayout = @"Views\DownloadHistory.bsml")]
-	[ViewDefinition("BetterSongSearch.UI.Views.DownloadHistory.bsml")]
-	class DownloadHistoryView : BSMLAutomaticViewController, TableView.IDataSource {
-		[UIComponent("scrollBarContainer")] private VerticalLayoutGroup _scrollBarContainer = null;
-		[UIComponent("downloadList")] CustomListTableData downloadHistoryData = null;
-		TableView downloadHistoryTable => downloadHistoryData?.tableView;
-		public readonly List<DownloadHistoryEntry> downloadList = new List<DownloadHistoryEntry>();
-		DownloadHistoryEntry[] downloadListSorted = null;
+namespace BetterSongSearch.UI
+{
+    [HotReload(RelativePathToLayout = @"Views\DownloadHistory.bsml")]
+    [ViewDefinition("BetterSongSearch.UI.Views.DownloadHistory.bsml")]
+    internal class DownloadHistoryView : BSMLAutomaticViewController, TableView.IDataSource
+    {
+        [UIComponent("scrollBarContainer")] private readonly VerticalLayoutGroup _scrollBarContainer = null;
+        [UIComponent("downloadList")] private readonly CustomListTableData downloadHistoryData = null;
 
-		public bool hasUnloadedDownloads => downloadList.Any(x => x.status == DownloadHistoryEntry.DownloadStatus.Downloaded);
+        private TableView downloadHistoryTable => downloadHistoryData?.tableView;
+        public readonly List<DownloadHistoryEntry> downloadList = new List<DownloadHistoryEntry>();
+        private DownloadHistoryEntry[] downloadListSorted = null;
 
-		const int RETRY_COUNT = 3;
-		const int MAX_PARALLEL_DOWNLOADS = 2;
+        public bool hasUnloadedDownloads => downloadList.Any(x => x.status == DownloadHistoryEntry.DownloadStatus.Downloaded);
 
-		public bool TryAddDownload(SongSearchSong song, bool isBatch = false) {
-			var existingDLHistoryEntry = downloadList.FirstOrDefault(x => x.key == song.detailsSong.key);
+        private const int RETRY_COUNT = 3;
+        private const int MAX_PARALLEL_DOWNLOADS = 2; // Might add this as a menu option
 
-			existingDLHistoryEntry?.ResetIfFailed();
+        public bool TryAddDownload(SongSearchSong song, bool isBatch = false)
+        {
+            DownloadHistoryEntry existingDLHistoryEntry = downloadList.FirstOrDefault(x => x.key == song.detailsSong.key);
 
-			if(!song.CheckIsDownloadable())
-				return false;
+            existingDLHistoryEntry?.ResetIfFailed();
 
-			if(existingDLHistoryEntry == null) {
-				//var newPos = downloadList.FindLastIndex(x => x.status > DownloadHistoryEntry.DownloadStatus.Queued);
-				downloadList.Add(new DownloadHistoryEntry(song));
-				downloadHistoryTable.ScrollToCellWithIdx(0, TableView.ScrollPositionType.Beginning, false);
-			} else {
-				existingDLHistoryEntry.status = DownloadHistoryEntry.DownloadStatus.Queued;
-			}
+            if (!song.CheckIsDownloadable())
+            {
+                return false;
+            }
 
-			ProcessDownloads(!isBatch);
+            if (existingDLHistoryEntry == null)
+            {
+                //var newPos = downloadList.FindLastIndex(x => x.status > DownloadHistoryEntry.DownloadStatus.Queued);
+                downloadList.Add(new DownloadHistoryEntry(song));
+                downloadHistoryTable.ScrollToCellWithIdx(0, TableView.ScrollPositionType.Beginning, false);
+            }
+            else
+            {
+                existingDLHistoryEntry.status = DownloadHistoryEntry.DownloadStatus.Queued;
+            }
 
-			return true;
-		}
+            ProcessDownloads(!isBatch);
 
-		void SelectSong(TableView _, int idx) {
-			if(BSSFlowCoordinator.songDetails.songs.FindByMapId(downloadListSorted[idx].key, out var song)) {
-				BSSFlowCoordinator.songListView.selectedSongView.SetSelectedSong(BSSFlowCoordinator.songsList[song.index]);
-				BSSFlowCoordinator.songListView.songList.ClearSelection();
-			}
-		}
+            return true;
+        }
 
-		public async void ProcessDownloads(bool forceTableReload = false) {
-			if(!gameObject.activeInHierarchy)
-				return;
+        private void SelectSong(TableView _, int idx)
+        {
+            if (BSSFlowCoordinator.songDetails.songs.FindByMapId(downloadListSorted[idx].key, out SongDetailsCache.Structs.Song song))
+            {
+                BSSFlowCoordinator.songListView.selectedSongView.SetSelectedSong(BSSFlowCoordinator.songsList[song.index]);
+                BSSFlowCoordinator.songListView.songList.ClearSelection();
+            }
+        }
 
-			if(downloadList.Count(x => x.IsInAnyOfStates(DownloadHistoryEntry.DownloadStatus.Preparing | DownloadHistoryEntry.DownloadStatus.Downloading)) >= MAX_PARALLEL_DOWNLOADS) {
-				if(forceTableReload)
-					RefreshTable(true);
+        public async void ProcessDownloads(bool forceTableReload = false)
+        {
+            if (!gameObject.activeInHierarchy)
+            {
+                return;
+            }
 
-				return;
-			}
+            if (downloadList.Count(x => x.IsInAnyOfStates(DownloadHistoryEntry.DownloadStatus.Preparing | DownloadHistoryEntry.DownloadStatus.Downloading)) >= MAX_PARALLEL_DOWNLOADS)
+            {
+                if (forceTableReload)
+                {
+                    RefreshTable(true);
+                }
 
-			var firstEntry = downloadList
-				.Where(x => x.retries < RETRY_COUNT && x.IsInAnyOfStates(DownloadHistoryEntry.DownloadStatus.Failed | DownloadHistoryEntry.DownloadStatus.Queued))
-				.OrderBy(x => x.orderValue)
-				.FirstOrDefault();
+                return;
+            }
 
-			if(firstEntry == null) {
-				RefreshTable(forceTableReload);
-				return;
-			}
+            DownloadHistoryEntry firstEntry = downloadList
+                .Where(x => x.retries < RETRY_COUNT && x.IsInAnyOfStates(DownloadHistoryEntry.DownloadStatus.Failed | DownloadHistoryEntry.DownloadStatus.Queued))
+                .OrderBy(x => x.orderValue)
+                .FirstOrDefault();
 
-			if(firstEntry.status == DownloadHistoryEntry.DownloadStatus.Failed)
-				firstEntry.retries++;
+            if (firstEntry == null)
+            {
+                RefreshTable(forceTableReload);
+                return;
+            }
 
-			firstEntry.downloadProgress = 0f;
-			firstEntry.status = DownloadHistoryEntry.DownloadStatus.Preparing;
+            if (firstEntry.status == DownloadHistoryEntry.DownloadStatus.Failed)
+            {
+                firstEntry.retries++;
+            }
 
-			RefreshTable(true);
+            firstEntry.downloadProgress = 0f;
+            firstEntry.status = DownloadHistoryEntry.DownloadStatus.Preparing;
 
-			await Task.Run(async () => {
-				try {
-					var updateRateLimiter = new Stopwatch();
-					updateRateLimiter.Start();
+            RefreshTable(true);
 
-					await SongDownloader.BeatmapDownload(firstEntry, BSSFlowCoordinator.closeCancelSource.Token, (float progress) => {
-						if(updateRateLimiter.ElapsedMilliseconds < 50)
-							return;
+            await Task.Run(async () =>
+            {
+                try
+                {
+                    Stopwatch updateRateLimiter = new Stopwatch();
+                    updateRateLimiter.Start();
 
-						firstEntry.statusDetails = string.Format("({0:0%}{1})", progress, firstEntry.retries == 0 ? "" : $", retry #{firstEntry.retries} / {RETRY_COUNT}");
-						firstEntry.downloadProgress = progress;
+                    await RyuunosukeDownloader.BeatmapDownload(firstEntry, BSSFlowCoordinator.closeCancelSource.Token, (float progress) =>
+                    {
+                        if (updateRateLimiter.ElapsedMilliseconds < 50)
+                        {
+                            return;
+                        }
 
-						updateRateLimiter.Restart();
+                        firstEntry.statusDetails = string.Format("({0:0%}{1})", progress, firstEntry.retries == 0 ? "" : $", retry #{firstEntry.retries} / {RETRY_COUNT}");
+                        firstEntry.downloadProgress = progress;
 
-						if(firstEntry.UpdateProgressHandler != null)
-							IPA.Utilities.Async.UnityMainThreadTaskScheduler.Factory.StartNew(firstEntry.UpdateProgressHandler);
-					});
+                        updateRateLimiter.Restart();
 
-					firstEntry.downloadProgress = 1f;
-					firstEntry.status = DownloadHistoryEntry.DownloadStatus.Downloaded;
-					firstEntry.statusDetails = "";
-				} catch(Exception ex) {
-					if(!(ex is TaskCanceledException)) {
-						Plugin.Log.Warn("Download failed:");
-						Plugin.Log.Warn(ex);
-					}
+                        if (firstEntry.UpdateProgressHandler != null)
+                        {
+                            IPA.Utilities.Async.UnityMainThreadTaskScheduler.Factory.StartNew(firstEntry.UpdateProgressHandler);
+                        }
+                    });
 
-					firstEntry.status = DownloadHistoryEntry.DownloadStatus.Failed;
-					firstEntry.statusDetails = $"{(firstEntry.retries < 3 ? "(Will retry)" : "")}: More details in log, {ex.GetType().Name}";
-				}
-			});
+                    firstEntry.downloadProgress = 1f;
+                    firstEntry.status = DownloadHistoryEntry.DownloadStatus.Downloaded;
+                    firstEntry.statusDetails = "";
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is TaskCanceledException))
+                    {
+                        Plugin.Log.Warn("Download failed:");
+                        Plugin.Log.Warn(ex);
+                    }
 
-			if(firstEntry.status == DownloadHistoryEntry.DownloadStatus.Downloaded) {
-				// NESTING HELLLL
-				var selectedSongView = BSSFlowCoordinator.songListView.selectedSongView;
-				if(selectedSongView.selectedSong.detailsSong.key == firstEntry.key)
-					selectedSongView.SetIsDownloaded(true);
+                    firstEntry.status = DownloadHistoryEntry.DownloadStatus.Failed;
+                    firstEntry.statusDetails = $"{(firstEntry.retries < 3 ? "(Will retry)" : "")}: {ex.Message}";
+                }
+            });
 
-				BSSFlowCoordinator.songListView.songList.RefreshCells(false, true);
-			}
+            if (firstEntry.status == DownloadHistoryEntry.DownloadStatus.Downloaded)
+            {
+                // NESTING HELLLL
+                SelectedSongView selectedSongView = BSSFlowCoordinator.songListView.selectedSongView;
+                if (selectedSongView.selectedSong.detailsSong.key == firstEntry.key)
+                {
+                    selectedSongView.SetIsDownloaded(true);
+                }
 
-			ProcessDownloads(true);
-		}
+                BSSFlowCoordinator.songListView.songList.RefreshCells(false, true);
+            }
 
-		RatelimitCoroutine limitedFullTableReload;
+            ProcessDownloads(true);
+        }
 
-		public void RefreshTable(bool fullReload = true) {
-			downloadListSorted = downloadList.OrderBy(x => x.orderValue).ToArray();
-			SharedCoroutineStarter.instance.StartCoroutine(limitedFullTableReload.Call());
-		}
+        private RatelimitCoroutine limitedFullTableReload;
+
+        public void RefreshTable(bool fullReload = true)
+        {
+            downloadListSorted = downloadList.OrderBy(x => x.orderValue).ToArray();
+            SharedCoroutineStarter.instance.StartCoroutine(limitedFullTableReload.Call());
+        }
 
 
-		[UIAction("#post-parse")]
-		void Parsed() {
-			limitedFullTableReload = new RatelimitCoroutine(downloadHistoryTable.ReloadData, 0.1f);
-			downloadHistoryTable.SetDataSource(this, false);
+        [UIAction("#post-parse")]
+        private void Parsed()
+        {
+            limitedFullTableReload = new RatelimitCoroutine(downloadHistoryTable.ReloadData, 0.1f);
+            downloadHistoryTable.SetDataSource(this, false);
 
-			ReflectionUtil.SetField(downloadHistoryTable, "_canSelectSelectedCell", true);
+            ReflectionUtil.SetField(downloadHistoryTable, "_canSelectSelectedCell", true);
 
-			BSMLStuff.GetScrollbarForTable(downloadHistoryData.gameObject, _scrollBarContainer.transform);
-		}
+            BSMLStuff.GetScrollbarForTable(downloadHistoryData.gameObject, _scrollBarContainer.transform);
+        }
 
-		public float CellSize() => 8.05f;
-		public int NumberOfCells() => downloadList?.Count ?? 0;
+        public float CellSize()
+        {
+            return 8.05f;
+        }
 
-		public TableCell CellForIdx(TableView tableView, int idx) => DownloadListTableData.GetCell(tableView).PopulateWithSongData(downloadListSorted[idx]);
+        public int NumberOfCells()
+        {
+            return downloadList?.Count ?? 0;
+        }
 
-		public class DownloadHistoryEntry {
-			[Flags]
-			public enum DownloadStatus : byte {
-				Downloading = 1,
-				Preparing = 2,
-				Extracting = 4,
-				Queued = 8,
-				Failed = 16,
-				Downloaded = 32,
-				Loaded = 64
-			}
+        public TableCell CellForIdx(TableView tableView, int idx)
+        {
+            return DownloadListTableData.GetCell(tableView).PopulateWithSongData(downloadListSorted[idx]);
+        }
 
-			public bool isDownloading => status == DownloadStatus.Downloading || status == DownloadStatus.Preparing || status == DownloadStatus.Extracting;
-			public bool isQueued => status == DownloadStatus.Queued || (status == DownloadStatus.Failed && retries < RETRY_COUNT);
+        public class DownloadHistoryEntry
+        {
+            [Flags]
+            public enum DownloadStatus : byte
+            {
+                Downloading = 1,
+                Preparing = 2,
+                Extracting = 4,
+                Queued = 8,
+                Failed = 16,
+                Downloaded = 32,
+                Loaded = 64
+            }
 
-			public DownloadStatus status = DownloadStatus.Queued;
-			public string statusMessage => $"{status} {statusDetails}";
-			public string statusDetails = "";
-			public float downloadProgress = 1f;
+            public bool isDownloading => status == DownloadStatus.Downloading || status == DownloadStatus.Preparing || status == DownloadStatus.Extracting;
+            public bool isQueued => status == DownloadStatus.Queued || (status == DownloadStatus.Failed && retries < RETRY_COUNT);
 
-			public int retries = 0;
+            public DownloadStatus status = DownloadStatus.Queued;
+            public string statusMessage => $"{status} {statusDetails}";
+            public string statusDetails = "";
+            public float downloadProgress = 1f;
 
-			public readonly string songName;
-			public readonly string levelAuthorName;
-			public readonly string key;
-			public readonly string hash;
+            public int retries = 0;
 
-			public int orderValue => ((int)status * 100) + retries;
+            public readonly string songName;
+            public readonly string levelAuthorName;
+            public readonly string key;
+            public readonly string hash;
 
-			public bool IsInAnyOfStates(DownloadStatus states) {
-				return (status & states) != 0;
-			}
+            public int orderValue => ((int)status * 100) + retries;
 
-			public void ResetIfFailed() {
-				if(status != DownloadStatus.Failed || retries < RETRY_COUNT)
-					return;
+            public bool IsInAnyOfStates(DownloadStatus states)
+            {
+                return (status & states) != 0;
+            }
 
-				status = DownloadStatus.Queued;
-				retries = 0;
-			}
+            public void ResetIfFailed()
+            {
+                if (status != DownloadStatus.Failed || retries < RETRY_COUNT)
+                {
+                    return;
+                }
 
-			public DownloadHistoryEntry(SongSearchSong song) {
-				songName = song.detailsSong.songName;
-				levelAuthorName = song.detailsSong.levelAuthorName;
-				key = song.detailsSong.key.ToLowerInvariant();
-				hash = song.detailsSong.hash.ToLowerInvariant();
-			}
+                status = DownloadStatus.Queued;
+                retries = 0;
+            }
 
-			public Action UpdateProgressHandler;
-		}
-	}
+            public DownloadHistoryEntry(SongSearchSong song)
+            {
+                songName = song.detailsSong.songName;
+                levelAuthorName = song.detailsSong.levelAuthorName;
+                key = song.detailsSong.key.ToLowerInvariant();
+                hash = song.detailsSong.hash.ToLowerInvariant();
+            }
+
+            public Action UpdateProgressHandler;
+        }
+    }
 }

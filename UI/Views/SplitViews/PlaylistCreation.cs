@@ -8,112 +8,141 @@ using System;
 using System.IO;
 using TMPro;
 
-namespace BetterSongSearch.UI.SplitViews {
-	class PlaylistCreation {
-		public static readonly PlaylistCreation instance = new PlaylistCreation();
-		PlaylistCreation() { }
+namespace BetterSongSearch.UI.SplitViews
+{
+    internal class PlaylistCreation
+    {
+        public static readonly PlaylistCreation instance = new PlaylistCreation();
 
-		[UIComponent("playlistSongsCountSlider")] SliderSetting playlistSongsCountSlider = null;
-		[UIComponent("playlistName")] StringSetting playlistName = null;
-		[UIComponent("resultText")] TextMeshProUGUI resultText = null;
+        private PlaylistCreation() { }
 
-		[UIParams] readonly BSMLParserParams parserParams = null;
+        [UIComponent("playlistSongsCountSlider")] private readonly SliderSetting playlistSongsCountSlider = null;
+        [UIComponent("playlistName")] private readonly StringSetting playlistName = null;
+        [UIComponent("resultText")] private readonly TextMeshProUGUI resultText = null;
 
-		[UIAction("#post-parse")]
-		void Parsed() {
-			ReflectionUtil.SetField(playlistName.modalKeyboard.modalView, "_animateParentCanvas", false);
-		}
+        [UIParams] private readonly BSMLParserParams parserParams = null;
 
-		internal static string nameToUseOnNextOpen = "h";
-		static bool clearExisting = true;
+        [UIAction("#post-parse")]
+        private void Parsed()
+        {
+            ReflectionUtil.SetField(playlistName.modalKeyboard.modalView, "_animateParentCanvas", false);
+        }
 
-		public void Open() {
-			if(IPA.Loader.PluginManager.GetPluginFromId("BeatSaberPlaylistsLib") == null) {
-				resultText.text = "You dont have 'BeatSaberPlaylistsLib' installed which is required to create Playlists. You can get it in ModAssistant.";
-				parserParams.EmitEvent("ShowResultModal");
-				return;
-			}
+        internal static string nameToUseOnNextOpen = "h";
+        private static readonly bool clearExisting = true;
 
-			if(nameToUseOnNextOpen != null) {
-				playlistName.Text = nameToUseOnNextOpen;
-				nameToUseOnNextOpen = null;
-			}
+        public void Open()
+        {
+            if (IPA.Loader.PluginManager.GetPluginFromId("BeatSaberPlaylistsLib") == null)
+            {
+                resultText.text = "You dont have 'BeatSaberPlaylistsLib' installed which is required to create Playlists. You can get it in ModAssistant.";
+                parserParams.EmitEvent("ShowResultModal");
+                return;
+            }
 
-			parserParams.EmitEvent("ShowModal");
-		}
+            if (nameToUseOnNextOpen != null)
+            {
+                playlistName.Text = nameToUseOnNextOpen;
+                nameToUseOnNextOpen = null;
+            }
 
-		void ShowResult(string text) {
-			resultText.text = text;
-			parserParams.EmitEvent("CloseModal");
-			parserParams.EmitEvent("ShowResultModal");
-		}
+            parserParams.EmitEvent("ShowModal");
+        }
 
-		void CreatePlaylist() {
-			var fName = string.Concat(playlistName.Text.Split(Path.GetInvalidFileNameChars())).Trim();
+        private void ShowResult(string text)
+        {
+            resultText.text = text;
+            parserParams.EmitEvent("CloseModal");
+            parserParams.EmitEvent("ShowResultModal");
+        }
 
-			if(fName.Length == 0) {
-				ShowResult($"Your Playlist name is invalid");
-				return;
-			}
+        private void CreatePlaylist()
+        {
+            string fName = string.Concat(playlistName.Text.Split(Path.GetInvalidFileNameChars())).Trim();
 
-			try {
-				var manager = PlaylistManager.DefaultManager.CreateChildManager("BetterSongSearch");
+            if (fName.Length == 0)
+            {
+                ShowResult($"Your Playlist name is invalid");
+                return;
+            }
 
-				if(!manager.TryGetPlaylist(fName, out var plist))
-					plist = manager.CreatePlaylist(
-						fName,
-						playlistName.Text,
-						"BetterSongSearch",
-						""
-					);
+            try
+            {
+                PlaylistManager manager = PlaylistManager.DefaultManager.CreateChildManager("BetterSongSearch");
 
-				if(clearExisting)
-					plist.Clear();
+                if (!manager.TryGetPlaylist(fName, out BeatSaberPlaylistsLib.Types.IPlaylist plist))
+                {
+                    plist = manager.CreatePlaylist(
+                        fName,
+                        playlistName.Text,
+                        "BetterSongSearch",
+                        ""
+                    );
+                }
 
-				plist.SetCustomData("BetterSongSearchFilter", FilterView.currentFilter.Serialize(Newtonsoft.Json.Formatting.None));
-				plist.SetCustomData("BetterSongSearchSearchTerm", BSSFlowCoordinator.songListView.songSearchInput.text);
-				plist.SetCustomData("BetterSongSearchSort", SongListController.selectedSortMode);
-				plist.AllowDuplicates = false;
+                if (clearExisting)
+                {
+                    plist.Clear();
+                }
 
-				int addedSongs = 0;
+                plist.SetCustomData("BetterSongSearchFilter", FilterView.currentFilter.Serialize(Newtonsoft.Json.Formatting.None));
+                plist.SetCustomData("BetterSongSearchSearchTerm", BSSFlowCoordinator.songListView.songSearchInput.text);
+                plist.SetCustomData("BetterSongSearchSort", SongListController.selectedSortMode);
+                plist.AllowDuplicates = false;
 
-				for(var i = 0; i < SongListController.searchedSongsList.Count; i++) {
-					if(addedSongs >= playlistSongsCountSlider.Value)
-						break;
+                int addedSongs = 0;
 
-					var s = SongListController.searchedSongsList[i];
+                for (int i = 0; i < SongListController.searchedSongsList.Count; i++)
+                {
+                    if (addedSongs >= playlistSongsCountSlider.Value)
+                    {
+                        break;
+                    }
 
-					var pls = (PlaylistSong)plist.Add(s.hash, s.detailsSong.songName, s.detailsSong.key, s.detailsSong.levelAuthorName);
+                    SongSearchSong s = SongListController.searchedSongsList[i];
 
-					if(pls == null)
-						continue;
+                    PlaylistSong pls = (PlaylistSong)plist.Add(s.hash, s.detailsSong.songName, s.detailsSong.key, s.detailsSong.levelAuthorName);
 
-					foreach(var x in s.diffs) {
-						if(!x.passesFilter)
-							continue;
+                    if (pls == null)
+                    {
+                        continue;
+                    }
 
-						var dchar = x.detailsDiff.characteristic.ToString();
+                    foreach (SongSearchSong.SongSearchDiff x in s.diffs)
+                    {
+                        if (!x.passesFilter)
+                        {
+                            continue;
+                        }
 
-						if(dchar == "ThreeSixtyDegree")
-							dchar = "360Degree";
-						else if(dchar == "NinetyDegree")
-							dchar = "90Degree";
+                        string dchar = x.detailsDiff.characteristic.ToString();
 
-						pls.AddDifficulty(dchar, x.detailsDiff.difficulty.ToString());
-					}
+                        if (dchar == "ThreeSixtyDegree")
+                        {
+                            dchar = "360Degree";
+                        }
+                        else if (dchar == "NinetyDegree")
+                        {
+                            dchar = "90Degree";
+                        }
 
-					addedSongs++;
-				}
+                        pls.AddDifficulty(dchar, x.detailsDiff.difficulty.ToString());
+                    }
 
-				manager.StorePlaylist(plist);
-				manager.RequestRefresh("BetterSongSearch");
+                    addedSongs++;
+                }
 
-				ShowResult($"Added <b><color=#CCC>{addedSongs}</color></b> Songs to Playlist <b><color=#CCC>{playlistName.Text}</color></b> (Contains {plist.Count} now)");
-			} catch(Exception ex) {
-				ShowResult($"Playlist failed to Create: More details in log, {ex.GetType().Name}");
-				Plugin.Log.Warn("Failed to create Playlist:");
-				Plugin.Log.Warn(ex);
-			}
-		}
-	}
+                manager.StorePlaylist(plist);
+                manager.RequestRefresh("BetterSongSearch");
+
+                ShowResult($"Added <b><color=#CCC>{addedSongs}</color></b> Songs to Playlist <b><color=#CCC>{playlistName.Text}</color></b> (Contains {plist.Count} now)");
+            }
+            catch (Exception ex)
+            {
+                ShowResult($"Playlist failed to Create: More details in log, {ex.GetType().Name}");
+                Plugin.Log.Warn("Failed to create Playlist:");
+                Plugin.Log.Warn(ex);
+            }
+        }
+    }
 }
